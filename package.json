@@ -1,7 +1,7 @@
 {
   "name": "mass-image-processor",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,6 +15,11 @@
     "appId": "com.mass-image-processor.app",
     "productName": "Mass Image Processor",
     "asar": true,
+    "asarUnpack": [
+      "**/node_modules/sharp/**/*",
+      "**/node_modules/@img/**/*",
+      "**/*.node"
+    ],
     "directories": {
       "output": "release"
     },
