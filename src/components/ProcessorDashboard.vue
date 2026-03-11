@@ -361,11 +361,29 @@ const config = reactive({
   aiProvider: 'google',
   aiApiKey: '',
   aiModel: 'gemini-1.5-flash',
-  aiPrompt: 'Provide a detailed description of the image, including subject, colors, and keywords for a search index.',
+  aiPrompt: 'Analyze this image and extract highly detailed metadata according to the strict JSON schema provided.\n\nRules for extraction:\n1. "description": Write a rich, objective, descriptive paragraph covering subjects, actions, background, and visual composition.\n2. "colors": Extract the primary and secondary dominant colors as exact Hex Codes (e.g. #E0B890).\n3. "people": If people are present, create an array of each person containing their estimated age group, gender, skin tone, and approximate location (bounding_box in format [ymin, xmin, ymax, xmax] coordinates from 0-1000).\n4. "objects": List the primary focus objects, their counts, and their approximate location (bounding_box in format [ymin, xmin, ymax, xmax] coordinates from 0-1000).\n5. "keywords": Provide at least 15 highly relevant SEO keywords or tags based on the image content.',
   aiSchema: {
     description: 'string',
-    keywords: ['string'],
-    alt_text: 'string'
+    colors: {
+      primary: 'string',
+      secondary: 'string'
+    },
+    people: [
+      {
+        age_group: 'string',
+        gender: 'string',
+        skin_color: 'string',
+        bounding_box: 'string'
+      }
+    ],
+    objects: [
+      {
+        name: 'string',
+        count: 'number',
+        bounding_box: 'string'
+      }
+    ],
+    keywords: ['string']
   },
   concurrency: 3
 })
