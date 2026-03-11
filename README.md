@@ -7,7 +7,11 @@ An Electron-based desktop application built with Vue, Tailwind CSS, and the Verc
 - **Mass Resizing (1:N):** Process an entire directory and output multiple resized versions (e.g., thumbnail, medium, large) for each source image using `sharp`.
 - **AI Metadata Generation:** Automatically describe images and extract keywords using the Vercel AI SDK (supports Google Gemini and OpenAI).
 - **Customizable JSON Schemas:** Define the exact JSON structure you want the AI to output to perfectly map to your Knowledge Base.
-- **Smart Incremental Processing:** Automatically tracks processed files using a local `.mip_processed.json` file. If a batch is interrupted, you can resume exactly where you left off.
+- **Recursive Directory Processing:** Automatically scans all nested subfolders within your selected Input Folder. The exact subfolder structure is mirrored in your Output Folder, keeping your batches perfectly organized.
+- **Smart Incremental Processing & Crash Recovery:** Automatically tracks processed files using a hidden, local `.mip_processed.json` file stored in the root of your Input Folder. 
+  - **Resume Anytime:** If a batch is interrupted or cancelled, you can resume exactly where you left off.
+  - **Crash-Proof File Locking:** Uses strict asynchronous queue locking when updating the tracking file, ensuring your progress is safely saved even if the application closes unexpectedly.
+  - **Duplicate Prevention:** Identifies and skips files with the exact same name across different subfolders to prevent redundant AI API calls and processing.
 - **Cross-Platform:** Builds available for macOS (`.dmg`) and Windows (`.exe` portable and NSIS installer).
 
 ## Prerequisites
