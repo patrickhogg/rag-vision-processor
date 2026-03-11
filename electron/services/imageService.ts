@@ -47,7 +47,14 @@ export const resizeImage = async (
       outputFileName = `${baseName}-${targetWidth}${finalExt}`;
     }
 
-    const outputPath = path.join(outputDir, outputFileName);
+    let outputPath = path.join(outputDir, outputFileName);
+    
+    // Prevent overwriting the exact same source file
+    if (path.resolve(outputPath) === path.resolve(inputPath)) {
+      const parsedPath = path.parse(outputPath);
+      outputPath = path.join(parsedPath.dir, `${parsedPath.name}_resized${parsedPath.ext}`);
+      outputFileName = path.basename(outputPath);
+    }
 
     let op = pipeline.clone().resize({
       width: targetWidth,

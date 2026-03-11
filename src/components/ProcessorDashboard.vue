@@ -323,7 +323,7 @@
       </main>
 
       <footer class="text-center pb-12">
-        <p class="text-slate-400 text-xs">Mass Image Processor v1.0 • Built with Electron & Vercel AI SDK</p>
+        <p class="text-slate-400 text-xs">Mass Image Processor v1.0.1 • Built with Electron & Vercel AI SDK</p>
       </footer>
     </div>
   </div>
@@ -411,7 +411,7 @@ const checkTracking = async () => {
     trackingInfo.value = { exists: false, processedCount: 0, totalValidImages: 0, pendingCount: 0 }
     return
   }
-  trackingInfo.value = await (window as any).ipcRenderer.invoke('check-tracking-file', config.inputDir)
+  trackingInfo.value = await (window as any).ipcRenderer.invoke('check-tracking-file', config.inputDir, config.outputDir)
 }
 
 const clearTracking = async () => {
@@ -422,8 +422,8 @@ const clearTracking = async () => {
   }
 }
 
-// Watch inputDir specifically to update tracking info
-watch(() => config.inputDir, () => {
+// Watch inputDir and outputDir specifically to update tracking info
+watch([() => config.inputDir, () => config.outputDir], () => {
   checkTracking()
 })
 
@@ -432,6 +432,8 @@ const updateSchema = () => {
     config.aiSchema = JSON.parse(schemaRaw.value)
   } catch (e) {
     alert('Invalid JSON in schema definition')
+    // Revert the text box to the last valid schema to avoid UI desync
+    schemaRaw.value = JSON.stringify(config.aiSchema, null, 2)
   }
 }
 

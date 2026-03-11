@@ -78,9 +78,9 @@ app.whenReady().then(() => {
     return true
   })
 
-  ipcMain.handle('check-tracking-file', async (_event, dirPath) => {
+  ipcMain.handle('check-tracking-file', async (_event, dirPath, outputDir) => {
     if (!dirPath) return { exists: false, processedCount: 0, totalValidImages: 0, pendingCount: 0 }
-    return await getDirectoryStats(dirPath)
+    return await getDirectoryStats(dirPath, outputDir)
   })
 
   ipcMain.handle('delete-tracking-file', async (_event, dirPath) => {

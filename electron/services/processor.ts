@@ -5,11 +5,15 @@ import { resizeImage, SizeConfig } from './imageService';
 import { analyzeImage, AIProvider } from './aiService';
 import { BrowserWindow } from 'electron';
 
-export async function getFiles(dir: string): Promise<string[]> {
+export async function getFiles(dir: string, excludeDir?: string): Promise<string[]> {
+  const resolvedExclude = excludeDir ? path.resolve(excludeDir) : undefined;
+  if (resolvedExclude && path.resolve(dir) === resolvedExclude) return [];
+
   const dirents = await fs.readdir(dir, { withFileTypes: true });
   const files = await Promise.all(dirents.map((dirent) => {
     const res = path.resolve(dir, dirent.name);
-    return dirent.isDirectory() ? getFiles(res) : res;
+    if (resolvedExclude && res === resolvedExclude) return [];
+    return dirent.isDirectory() ? getFiles(res, excludeDir) : res;
   }));
   return Array.prototype.concat(...files);
 }
@@ -20,9 +24,9 @@ export const cancelBatchProcessor = () => {
   isCancelled = true;
 };
 
-export const getDirectoryStats = async (inputDir: string) => {
+export const getDirectoryStats = async (inputDir: string, outputDir?: string) => {
   try {
-    const allFiles = await getFiles(inputDir);
+    const allFiles = await getFiles(inputDir, outputDir);
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.tiff'];
     
     const processedRecordPath = path.join(inputDir, '.mip_processed.json');
@@ -34,7 +38,6 @@ export const getDirectoryStats = async (inputDir: string) => {
       // File does not exist or is invalid
     }
     const processedSet = new Set(processedFiles);
-    const seenBasenames = new Set(processedFiles.map(f => path.basename(f)));
 
     let totalValidImages = 0;
     let pendingCount = 0;
@@ -43,10 +46,8 @@ export const getDirectoryStats = async (inputDir: string) => {
       if (imageExtensions.includes(path.extname(f).toLowerCase())) {
         totalValidImages++;
         const relPath = path.relative(inputDir, f);
-        const fileName = path.basename(relPath);
         
-        if (!processedSet.has(relPath) && !seenBasenames.has(fileName)) {
-          seenBasenames.add(fileName);
+        if (!processedSet.has(relPath)) {
           pendingCount++;
         }
       }
@@ -105,7 +106,7 @@ export const runBatchProcessor = async (
 
   const limit = pLimit(concurrency);
   const writeLimit = pLimit(1); // Lock for incremental tracking file writes
-  const allFiles = await getFiles(inputDir);
+  const allFiles = await getFiles(inputDir, outputDir);
   const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.tiff'];
   
   // Load tracking metadata for previously processed files
@@ -118,24 +119,11 @@ export const runBatchProcessor = async (
     // File does not exist or is not valid JSON yet
   }
   const processedSet = new Set(processedFiles);
-  
-  // Track basenames to ensure files with the exact same name in subfolders are skipped
-  const seenBasenames = new Set(processedFiles.map(f => path.basename(f)));
 
   const imageFiles = allFiles
     .filter((f) => imageExtensions.includes(path.extname(f).toLowerCase()))
     .map((f) => path.relative(inputDir, f))
-    .filter((relPath) => {
-      // Skip if exactly this file was already processed
-      if (processedSet.has(relPath)) return false;
-      
-      // Skip if a file with this exact name was already processed or queued
-      const fileName = path.basename(relPath);
-      if (seenBasenames.has(fileName)) return false;
-      
-      seenBasenames.add(fileName);
-      return true;
-    });
+    .filter((relPath) => !processedSet.has(relPath));
 
   const total = imageFiles.length;
   if (total === 0) {
@@ -206,7 +194,9 @@ export const runBatchProcessor = async (
           // 4. Save JSON using template
           const jsonFileName = jsonNameTemplate
             .replace('{base}', baseName)
-            .replace('{ext}', 'json');
+            .replace('{width}', '') // Strip width if accidentally included
+            .replace('{ext}', 'json')
+            .replace(/-+\./, '.'); // Cleanup hanging dashes before extension
           
           const jsonPath = path.join(currentOutputDir, jsonFileName);
           await fs.writeFile(jsonPath, JSON.stringify(finalJson, null, 2));
@@ -215,7 +205,7 @@ export const runBatchProcessor = async (
         processedSet.add(file);
         
         // Write tracking file incrementally using a lock (pLimit(1)) to prevent write conflicts
-        writeLimit(async () => {
+        await writeLimit(async () => {
           try {
             await fs.writeFile(processedRecordPath, JSON.stringify(Array.from(processedSet), null, 2));
           } catch (writeErr) {
